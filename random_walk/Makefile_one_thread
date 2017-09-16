@@ -1,0 +1,9 @@
+CC = gcc
+CFLAGS = -fopenmp
+all: random_walk_for_one_thread
+random_walk_for_one_thread: random_walk_for_one_thread.o
+	$(CC) $(CFLAGS) random_walk_for_one_thread.o -o random_walk_for_one_thread
+random_walk_for_one_thread.o: random_walk_for_one_thread.c
+	$(CC) $(CFLAGS) random_walk_for_one_thread.c -c
+clean:
+	rm -f random_walk_for_one_thread random_walk_for_one_thread.o
