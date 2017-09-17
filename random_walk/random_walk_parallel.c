@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
     int amount_of_points_finished_in_B = 0;
     double start = omp_get_wtime();
     int i = 0;
-    #pragma omp parallel for private(i) reduction(+: sum_life_time, amount_of_points_finished_in_B)
+    #pragma omp parallel for private(i) schedule(static) reduction(+: sum_life_time, amount_of_points_finished_in_B)
     for (i = 0; i < stats.N; i++) {
         point_stats p = random_walk_single_point(&stats);
         sum_life_time += p.life_time;
@@ -115,10 +115,10 @@ int main(int argc, char** argv) {
     stats.life_expectancy = (double) sum_life_time / stats.N;
     stats.experimental_p = (double) amount_of_points_finished_in_B / stats.N;
     
-    FILE* file = fopen("stats.txt", "w");
-    //printf("gonna write in the file");
+   FILE* file = fopen("stats.txt", "a");
+    fseek(file, 0, SEEK_END);
     printf("%f %f %f\n", stats.experimental_p, stats.elapsed, stats.life_expectancy);
-    fprintf(file, "%f %f %f %d %d %d %d %f %d\n", stats.experimental_p, stats.elapsed, stats.life_expectancy, a, b, x, N, p, P);
+    fprintf(file, "\n exp_p = %f, time = %f, life_exp = %f, a = %d, b = %d, x = %d, N = %d, p = %f, P = %d\n", stats.experimental_p, stats.elapsed, stats.life_expectancy, a, b, x, N, p, P);
     fclose(file);
     return 0;
 }

@@ -96,11 +96,12 @@ int main(int argc, char** argv) {
     stats.elapsed = end - start;
     stats.life_expectancy = (double) sum_life_time / stats.N;
     stats.experimental_p = (double) amount_of_points_finished_in_B / stats.N;
-    
-    FILE* file = fopen("stats.txt", "w");
-    //printf("gonna write in the file");
+   
+     
+    FILE* file = fopen("stats.txt", "a");
+    fseek(file, 0, SEEK_END);
     printf("%f %f %f\n", stats.experimental_p, stats.elapsed, stats.life_expectancy);
-    fprintf(file, "%f %f %f %d %d %d %d %f %d\n", stats.experimental_p, stats.elapsed, stats.life_expectancy, a, b, x, N, p, P);
+    fprintf(file, "\n exp_p = %f, time = %f, life_exp = %f, a = %d, b = %d, x = %d, N = %d, p = %f, P = %d\n", stats.experimental_p, stats.elapsed, stats.life_expectancy, a, b, x, N, p, P);
     fclose(file);
     return 0;
 }
