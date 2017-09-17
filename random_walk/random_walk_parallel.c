@@ -1,11 +1,3 @@
-//
-//  another_try_monte_carlo.c
-//  monte_carlo
-//
-//  Created by Ирина Дмитриева on 11.09.17.
-//  Copyright © 2017 Irina Dmitriyeva. All rights reserved.
-//
-
 #include <stdio.h>
 #include <omp.h>
 #include <stdlib.h>
@@ -35,11 +27,9 @@ int generate_step(random_walk_stats* stats) {
     int thread_num = omp_get_thread_num();
     int rand_num = rand_r(&seeds_for_threads[thread_num]);
     if ((double) rand_num/RAND_MAX > stats->p) {
-	//printf("step = -1\n");
         return -1;
     }
     else {
-	//printf("step = 1\n");
         return 1;
     }
 }
@@ -50,7 +40,6 @@ point_stats random_walk_single_point(random_walk_stats* stats) {
     int life_time = 0;
     while(cur_position != stats->a && cur_position != stats->b) {
         int step = generate_step(stats);
-	//printf("cur_position = %d\n", cur_position);
         cur_position += step;
         life_time++;
     }
@@ -84,10 +73,6 @@ int main(int argc, char** argv) {
 	stats.p = p,
 	stats.P = P,
     };
-    
-//    scanf("%d %d %d %d %lf %d", &stats->a, &stats->b, &stats->x, &stats->N, &stats->p, &stats->P);
-    // debug vivod
-    printf("%d %d %d %d %f %d\n", stats.a, stats.b, stats.x, stats.N, stats.p, stats.P);
     
     omp_set_dynamic(0);
     omp_set_num_threads(stats.P);
