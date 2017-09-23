@@ -1,13 +1,12 @@
-// m - max size of a chunk
-// P - number of OMP threads
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 #include <time.h>
 #include <math.h>
-//#include <omp.h>
-const int MAX_SIZE_OF_CHUNK = 10;
+#include <omp.h>
+
+int MIN_SIZE_OF_CHUNK = 10;
 
 void swap(int* a, int* b) {
     int temp;
@@ -18,10 +17,12 @@ void swap(int* a, int* b) {
 }
 
 int my_max(int a, int b) {
-    if (a > b)
+    if (a > b) {
         return a;
-    else
+    }
+    else {
         return b;
+    }
 }
 
 int binary_search(int x, int* arr, int p, int r) {
@@ -39,8 +40,7 @@ int binary_search(int x, int* arr, int p, int r) {
     return high;
 }
 
-int cmpfunc (const void * a, const void * b)
-{
+int cmpfunc (const void * a, const void * b) {
     return ( *(int*)a - *(int*)b );
 }
 
@@ -61,35 +61,35 @@ void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) 
         int q2 = binary_search(initial[q1], initial, p2, r2);
         int q3 = p3 + (q1 - p1) + (q2 - p2);
         output[q3] = initial[q1];
-        //        #pragma omp parallel
-        //      }
-        //          #pragma omp single nowait
-        //              {
-        //                  #pragma omp task
-        p_merge(initial, p1, q1 - 1, p2, q2 - 1, output, p3);
-        //                  #pragma omp task
-        p_merge(initial, q1 + 1, r1, q2, r2, output, q3 + 1);
+        #pragma omp parallel
+        {
+            #pragma omp single
+            {
+                #pragma omp task
+                p_merge(initial, p1, q1 - 1, p2, q2 - 1, output, p3);
+                #pragma omp task
+                p_merge(initial, q1 + 1, r1, q2, r2, output, q3 + 1);
+            }
+        }
     }
-    //      }
     return;
 }
 
 // p_merge_sort сортирует элементы в initial[p..r] и сохраняет их в output[s..s + r - p]
-
 void p_merge_sort(int* initial, int p, int r, int* output, int s) {
     int n = r - p + 1;
-    if (r - p > MAX_SIZE_OF_CHUNK) {
+    if (r - p > MIN_SIZE_OF_CHUNK) {
         int* temp =  (int *) malloc(sizeof(int) * n);
         int q = floor((p + r) / 2.0);
         int t = q - p + 1;
-        //#pragma omp parallel
+        #pragma omp parallel
         {
-            //#pragma omp single nowait
+            #pragma omp single
             {
-                //#pragma omp task
+                #pragma omp task
                 p_merge_sort(initial, p, q, temp, 0);
                 
-                //#pragma omp task
+                #pragma omp task
                 p_merge_sort(initial, q + 1, r, temp, t);
                 
                 //_____________
@@ -116,10 +116,10 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
         qsort(&initial[p], r - p + 1, sizeof(int), cmpfunc);
         
 
-//
-//        for (int i = 0; i < r - p + 1; i++) {
-//            output[s + i] = initial[p + i];
-//        }
+
+        for (int i = 0; i < r - p + 1; i++) {
+            output[s + i] = initial[p + i];
+        }
         
         
         //__________________
@@ -129,42 +129,80 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
 //        printf("\n");
         //_________________
         
-        //почему с memcopy не компилится???? я не понимат
-        memcpy(&output[s], &initial[p], (r - p + 1) * sizeof(int));
+        //memcpy(&output[s], &initial[p], (r - p + 1) * sizeof(int));
         
         return;
     }
 }
 
-int main() {
-    int n;
-    scanf("%d", &n);
-    int * test_array = (int *) malloc(sizeof(int) * n);
-    int* array = (int *) malloc(sizeof(int) * n);
-    int* result = (int *) malloc(sizeof(int) * n);
+int main(int argc, char** argv) {
+    int n; // количество чисел в сортируемом массиве
+    int P; // количество потоков
+    int m; // минимальный размер чанка
+
+    // считывание данных и выделение памяти
+    if (argc != 4) {
+        printf("Not enough arguments, try better. There are supposed to be 3 of them: n, m, P\n");
+        return 0;
+    } else {
+        printf("Enough arguments, yeeeeee\n");
+    }
+    n = atoi(argv[1]);
+    m = atoi(argv[2]);
+    P = atoi(argv[3]);
+    MIN_SIZE_OF_CHUNK = m;
+
+    int* array_for_quick_sort = (int *) malloc(sizeof(int) * n);
+    if (array_for_quick_sort == NULL) {
+        printf("memory allocation error\n");
+        exit(1);
+    }
+
+    int* array_for_merge_sort = (int *) malloc(sizeof(int) * n);
+    if (array_for_merge_sort == NULL) {
+        printf("memory allocation error\n");
+        free(array_for_quick_sort);
+        exit(1);
+    }
+
+    int* result_merge_sort = (int *) malloc(sizeof(int) * n);
+    if (result_merge_sort == NULL) {
+        printf("memory allocation error\n");
+        free(array_for_quick_sort);
+        free(array_for_merge_sort);
+        exit(1);
+    }
+    
+    omp_set_dynamic(0);
+    omp_set_num_threads(P);
+    
+    // генерируем массив для сортировки
+    srand(time(NULL));
     for (int i = 0; i < n; i++) {
-        int t = rand() % 100;
-        array[i] = t;
-        test_array[i] = t;
+        int t = rand() % 10000;
+        array_for_merge_sort[i] = t;
+        array_for_quick_sort[i] = t;
     }
 //    for (int i = 0; i < n; i++) {
-//        printf("%d ", array[i]);
+//        printf("%d ", array_for_merge_sort[i]);
 //    }
 //    printf("\n");
-    p_merge_sort(array, 0, n - 1, result, 0);
+    p_merge_sort(array_for_merge_sort, 0, n - 1, result_merge_sort, 0);
 //    for (int i = 0; i < n; i++) {
-//        printf("%d ", result[i]);
+//        printf("%d ", result_merge_sort[i]);
 //    }
 //    printf("\n");
-    qsort(&test_array[0], n, sizeof(int), cmpfunc);
+    qsort(&array_for_quick_sort[0], n, sizeof(int), cmpfunc);
+
+    // проверяем, корректно ли отработал наш мердж сорт
     for (int i = 0; i < n; i ++) {
-        if (test_array[i] == result[i]) {
+        if (array_for_quick_sort[i] == result_merge_sort[i]) {
             if (i == n - 1) {
                 printf("all good bro!!!!\n");
             }
         }
         else {
-            printf("all is bad!!!!\n");
+            printf("all bad bro!!!!\n");
             break;
         }
     }
