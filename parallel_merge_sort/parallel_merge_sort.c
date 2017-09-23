@@ -91,46 +91,17 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
                 
                 #pragma omp task
                 p_merge_sort(initial, q + 1, r, temp, t);
-                
-                //_____________
-//                printf("%d\n", n);
-//                for (int i = 0; i < n; i ++) {
-//                    printf("%d ", temp[i]);
-//                }
-//                printf("\n");
-                //_____________
             }
         }
         p_merge(temp, 0, t - 1, t, n - 1, output, s);
         return;
     }
     else {
-        
-        // _______________
-//        for (int i = 0 ; i < r - p + 1; i++) {
-//            printf("%d ", initial[p + i]);
-//        }
-//        printf("\n");
-        // _________________
-        
         qsort(&initial[p], r - p + 1, sizeof(int), cmpfunc);
-        
-
-
         for (int i = 0; i < r - p + 1; i++) {
             output[s + i] = initial[p + i];
         }
-        
-        
-        //__________________
-//        for (int i = 0 ; i < r - p + 1; i++) {
-//            printf("%d ", output[s + i]);
-//        }
-//        printf("\n");
-        //_________________
-        
         //memcpy(&output[s], &initial[p], (r - p + 1) * sizeof(int));
-        
         return;
     }
 }
