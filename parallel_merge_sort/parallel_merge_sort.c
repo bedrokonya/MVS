@@ -7,7 +7,7 @@
 #include <time.h>
 #include <math.h>
 //#include <omp.h>
-const int MAX_SIZE_OF_CHUNK = 3;
+const int MAX_SIZE_OF_CHUNK = 10;
 
 void swap(int* a, int* b) {
     int temp;
@@ -93,13 +93,12 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
                 p_merge_sort(initial, q + 1, r, temp, t);
                 
                 //_____________
-                printf("%d\n", n);
+//                printf("%d\n", n);
+//                for (int i = 0; i < n; i ++) {
+//                    printf("%d ", temp[i]);
+//                }
+//                printf("\n");
                 //_____________
-                
-                for (int i = 0; i < n; i ++) {
-                    printf("%d ", temp[i]);
-                }
-                printf("\n");
             }
         }
         p_merge(temp, 0, t - 1, t, n - 1, output, s);
@@ -108,30 +107,30 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
     else {
         
         // _______________
-        for (int i = 0 ; i < r - p + 1; i++) {
-            printf("%d ", initial[p + i]);
-        }
-        printf("\n");
+//        for (int i = 0 ; i < r - p + 1; i++) {
+//            printf("%d ", initial[p + i]);
+//        }
+//        printf("\n");
         // _________________
         
         qsort(&initial[p], r - p + 1, sizeof(int), cmpfunc);
         
 
-
-        for (int i = 0; i < r - p + 1; i++) {
-            output[s + i] = initial[p + i];
-        }
+//
+//        for (int i = 0; i < r - p + 1; i++) {
+//            output[s + i] = initial[p + i];
+//        }
         
         
         //__________________
-        for (int i = 0 ; i < r - p + 1; i++) {
-            printf("%d ", output[s + i]);
-        }
-        printf("\n");
+//        for (int i = 0 ; i < r - p + 1; i++) {
+//            printf("%d ", output[s + i]);
+//        }
+//        printf("\n");
         //_________________
         
         //почему с memcopy не компилится???? я не понимат
-        //memcopy(output, &initial[p], r - p + 1);
+        memcpy(&output[s], &initial[p], (r - p + 1) * sizeof(int));
         
         return;
     }
@@ -140,19 +139,34 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
 int main() {
     int n;
     scanf("%d", &n);
+    int * test_array = (int *) malloc(sizeof(int) * n);
     int* array = (int *) malloc(sizeof(int) * n);
     int* result = (int *) malloc(sizeof(int) * n);
     for (int i = 0; i < n; i++) {
         int t = rand() % 100;
         array[i] = t;
+        test_array[i] = t;
     }
-    for (int i = 0; i < n; i++) {
-        printf("%d ", array[i]);
-    }
-    printf("\n");
+//    for (int i = 0; i < n; i++) {
+//        printf("%d ", array[i]);
+//    }
+//    printf("\n");
     p_merge_sort(array, 0, n - 1, result, 0);
-    for (int i = 0; i < n; i++) {
-        printf("%d ", result[i]);
+//    for (int i = 0; i < n; i++) {
+//        printf("%d ", result[i]);
+//    }
+//    printf("\n");
+    qsort(&test_array[0], n, sizeof(int), cmpfunc);
+    for (int i = 0; i < n; i ++) {
+        if (test_array[i] == result[i]) {
+            if (i == n - 1) {
+                printf("all good bro!!!!\n");
+            }
+        }
+        else {
+            printf("all is bad!!!!\n");
+            break;
+        }
     }
     return 0;
 }
