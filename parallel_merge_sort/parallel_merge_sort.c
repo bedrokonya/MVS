@@ -93,7 +93,9 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
                 p_merge_sort(initial, q + 1, r, temp, t);
             }
         }
+
         p_merge(temp, 0, t - 1, t, n - 1, output, s);
+        free(temp);
         return;
     }
     else {
@@ -113,10 +115,10 @@ int main(int argc, char** argv) {
 
     // считывание данных и выделение памяти
     if (argc != 4) {
-        printf("Not enough arguments, try better. There are supposed to be 3 of them: n, m, P\n");
+        printf("Try better, there are supposed to be 3 of arguments: n, m, P\n");
         return 0;
     } else {
-        printf("Enough arguments, yeeeeee\n");
+        printf("Right amount of the arguments, yeeeeee\n");
     }
     n = atoi(argv[1]);
     m = atoi(argv[2]);
@@ -177,6 +179,9 @@ int main(int argc, char** argv) {
             break;
         }
     }
+    free(array_for_quick_sort);
+    free(array_for_merge_sort);
+    free(result_merge_sort);
     return 0;
 }
 
