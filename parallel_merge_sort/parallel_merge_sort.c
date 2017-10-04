@@ -6,7 +6,7 @@
 #include <math.h>
 #include <omp.h>
 
-int MIN_SIZE_OF_CHUNK = 10;
+int MAX_SIZE_OF_CHUNK = 10;
 
 void swap(int* a, int* b) {
     int temp;
@@ -63,7 +63,7 @@ void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) 
         output[q3] = initial[q1];
         #pragma omp parallel
         {
-            #pragma omp single
+            #pragma omp single nowait
             {
                 #pragma omp task
                 p_merge(initial, p1, q1 - 1, p2, q2 - 1, output, p3);
@@ -78,13 +78,13 @@ void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) 
 // p_merge_sort сортирует элементы в initial[p..r] и сохраняет их в output[s..s + r - p]
 void p_merge_sort(int* initial, int p, int r, int* output, int s) {
     int n = r - p + 1;
-    if (r - p > MIN_SIZE_OF_CHUNK) {
+    if (r - p > MAX_SIZE_OF_CHUNK) {
         int* temp =  (int *) malloc(sizeof(int) * n);
         int q = floor((p + r) / 2.0);
         int t = q - p + 1;
         #pragma omp parallel
         {
-            #pragma omp single
+            #pragma omp single nowait
             {
                 #pragma omp task
                 p_merge_sort(initial, p, q, temp, 0);
@@ -93,17 +93,16 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
                 p_merge_sort(initial, q + 1, r, temp, t);
             }
         }
-
         p_merge(temp, 0, t - 1, t, n - 1, output, s);
         free(temp);
         return;
     }
     else {
         qsort(&initial[p], r - p + 1, sizeof(int), cmpfunc);
-        for (int i = 0; i < r - p + 1; i++) {
-            output[s + i] = initial[p + i];
-        }
-        //memcpy(&output[s], &initial[p], (r - p + 1) * sizeof(int));
+        //for (int i = 0; i < r - p + 1; i++) {
+        //    output[s + i] = initial[p + i];
+        //}
+        memcpy(&output[s], &initial[p], (r - p + 1) * sizeof(int));
         return;
     }
 }
@@ -115,7 +114,7 @@ int main(int argc, char** argv) {
 
     // считывание данных и выделение памяти
     if (argc != 4) {
-        printf("Try better, there are supposed to be 3 of arguments: n, m, P\n");
+        printf("Try better, there are supposed to be 3 of the arguments: n, m, P\n");
         return 0;
     } else {
         printf("Right amount of the arguments, yeeeeee\n");
@@ -123,7 +122,7 @@ int main(int argc, char** argv) {
     n = atoi(argv[1]);
     m = atoi(argv[2]);
     P = atoi(argv[3]);
-    MIN_SIZE_OF_CHUNK = m;
+    MAX_SIZE_OF_CHUNK = m;
 
     int* array_for_quick_sort = (int *) malloc(sizeof(int) * n);
     if (array_for_quick_sort == NULL) {
@@ -156,16 +155,25 @@ int main(int argc, char** argv) {
         array_for_merge_sort[i] = t;
         array_for_quick_sort[i] = t;
     }
-//    for (int i = 0; i < n; i++) {
-//        printf("%d ", array_for_merge_sort[i]);
-//    }
-//    printf("\n");
+    
+    FILE* file = fopen("data.txt", "a");
+    fseek(file, 0, SEEK_END);
+    for (int i = 0; i < n; i++) {
+        fprintf(file, "%d ", array_for_merge_sort[i]);
+    }
+    fprintf(file, "\n");
+    
+    double start = omp_get_wtime();
     p_merge_sort(array_for_merge_sort, 0, n - 1, result_merge_sort, 0);
-//    for (int i = 0; i < n; i++) {
-//        printf("%d ", result_merge_sort[i]);
-//    }
-//    printf("\n");
+    double end = omp_get_wtime();
+    double merge_sort_elapsed = end - start;
+    printf("%f merge sort time\n", merge_sort_elapsed);
+
+    start = omp_get_wtime();
     qsort(&array_for_quick_sort[0], n, sizeof(int), cmpfunc);
+    end = omp_get_wtime();
+    double quicksort_elapsed = end - start;
+    printf("%f quicksort time\n", quicksort_elapsed);
 
     // проверяем, корректно ли отработал наш мердж сорт
     for (int i = 0; i < n; i ++) {
@@ -179,6 +187,13 @@ int main(int argc, char** argv) {
             break;
         }
     }
+    file = fopen("stats.txt", "a");
+    fseek(file, 0, SEEK_END);
+    fprintf(file, "%f %d %d %d", merge_sort_elapsed, n, m, P);
+    fclose(file);
+
+    
+    
     free(array_for_quick_sort);
     free(array_for_merge_sort);
     free(result_merge_sort);
