@@ -44,7 +44,8 @@ int cmpfunc (const void * a, const void * b) {
     return ( *(int*)a - *(int*)b );
 }
 
-// Предполагается, что два сливаемых подмассива находятся в одном и том же массиве, однако не предполагается, что они граничат друг с другом. 
+// Предполагается, что два сливаемых подмассива находятся в одном и том же массиве,
+// однако не предполагается, что они граничат друг с другом. 
 // Сливает два отсортированных подмассива initial[р1..r1] и initial[p2..r2] в подмассив output[p3..r3].
 void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) {
     int n1 = r1 - p1 + 1;
@@ -59,7 +60,9 @@ void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) 
     }
     else { 
         int q1 = (p1 + r1) / 2;
-        int q2 = binary_search(initial[q1], initial, p2, r2); // Находим такую точку q2 в подмассиве initial[p2..r2], такую, что все эелементы в initial[p2..q2-1] меньше initial[q1], а все элементы initial[q2..r2] не менее initial[q1]
+        int q2 = binary_search(initial[q1], initial, p2, r2); // Находим такую точку q2 в подмассиве initial[p2..r2], такую,
+                                                              // что все эелементы в initial[p2..q2-1] меньше initial[q1],
+                                                              // а все элементы initial[q2..r2] не менее initial[q1]
         int q3 = p3 + (q1 - p1) + (q2 - p2);
         output[q3] = initial[q1];
         #pragma omp parallel
@@ -82,7 +85,8 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
     if (r - p > MAX_SIZE_OF_CHUNK) {
         int* temp =  (int *) malloc(sizeof(int) * n);
         int q = (p + r) / 2;
-        int t = q - p + 1; // определяем начальный индекс в temp, указывающий, где будут храниться отсортированные элементы подмассива initial[q+1..r]
+        int t = q - p + 1; // определяем начальный индекс в temp, указывающий,
+                           // где будут храниться отсортированные элементы подмассива initial[q+1..r]
         #pragma omp parallel
         {
             #pragma omp single nowait
