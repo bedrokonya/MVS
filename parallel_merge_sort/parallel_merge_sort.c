@@ -60,23 +60,49 @@ void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) 
     }
     else { 
         int q1 = (p1 + r1) / 2;
-        int q2 = binary_search(initial[q1], initial, p2, r2); // Находим такую точку q2 в подмассиве initial[p2..r2], такую,
+        int q2 = binary_search(initial[q1], initial, p2, r2); // Находим точку q2 в подмассиве initial[p2..r2], такую,
                                                               // что все эелементы в initial[p2..q2-1] меньше initial[q1],
                                                               // а все элементы initial[q2..r2] не менее initial[q1]
         int q3 = p3 + (q1 - p1) + (q2 - p2);
         output[q3] = initial[q1];
         #pragma omp parallel
         {
-            #pragma omp single nowait
+            #pragma omp sections nowait
             {
-                #pragma omp task
-                p_merge(initial, p1, q1 - 1, p2, q2 - 1, output, p3);
-                #pragma omp task
-                p_merge(initial, q1 + 1, r1, q2, r2, output, q3 + 1);
+                #pragma omp section
+                {
+                    p_merge(initial, p1, q1 - 1, p2, q2 - 1, output, p3);
+                }
+                #pragma omp section
+                {
+                    p_merge(initial, q1 + 1, r1, q2, r2, output, q3 + 1);
+                }
             }
         }
     }
     return;
+}
+
+void p_merge2(int* initial, int p1, int r1, int p2, int r2, int* output, int p3, int n, int t) {
+    int i = 0;
+    int j = 0;
+    while((i < t) && (j + t < n)) {
+        if(initial[i] < initial[j + t]) {
+            output[p3 + i + j] = initial[i];
+            i++;
+        } else {
+            output[p3 + i + j] = initial[j + t];
+            j++;
+        }
+    }
+    while(i < t) {
+        output[p3 + i + j] = initial[i];
+        i++;
+    }
+    while(j + t < n) {
+        output[p3 + i + j] = initial[t + j];
+        j++;
+    }
 }
 
 // p_merge_sort сортирует элементы в initial[p..r] и сохраняет их в output[s..s + r - p]
@@ -89,16 +115,21 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
                            // где будут храниться отсортированные элементы подмассива initial[q+1..r]
         #pragma omp parallel
         {
-            #pragma omp single nowait
+            #pragma omp sections nowait
             {
-                #pragma omp task
-                p_merge_sort(initial, p, q, temp, 0);
+                #pragma omp section
+                {
+                    p_merge_sort(initial, p, q, temp, 0);
+                }
                 
-                #pragma omp task
-                p_merge_sort(initial, q + 1, r, temp, t);
+                #pragma omp section
+                {
+                    p_merge_sort(initial, q + 1, r, temp, t);
+                }
             }
         }
-        p_merge(temp, 0, t - 1, t, n - 1, output, s);
+        //p_merge(temp, 0, t - 1, t, n - 1, output, s);
+        p_merge2(temp, 0, t - 1, t, n - 1, output, s, n, t);
         free(temp);
         return;
     }
@@ -160,9 +191,9 @@ int main(int argc, char** argv) {
     
     FILE* file = fopen("data.txt", "a");
     fseek(file, 0, SEEK_END);
-    for (int i = 0; i < n; i++) {
-        fprintf(file, "%d ", array_for_merge_sort[i]);
-    }
+    //for (int i = 0; i < n; i++) {
+    //    fprintf(file, "%d ", array_for_merge_sort[i]);
+    //}
     fprintf(file, "\n");
     
     double start = omp_get_wtime();
@@ -170,6 +201,12 @@ int main(int argc, char** argv) {
     double end = omp_get_wtime();
     double merge_sort_elapsed = end - start;
     printf("%f merge sort time\n", merge_sort_elapsed);
+    fseek(file, 0, SEEK_END);
+    //for (int i = 0; i < n; i++) {
+    //    fprintf(file, "%d ", result_merge_sort[i]);
+    //}
+    //fprintf(file, "\n\n");
+    fclose(file);
 
     start = omp_get_wtime();
     qsort(&array_for_quick_sort[0], n, sizeof(int), cmpfunc);
@@ -191,7 +228,7 @@ int main(int argc, char** argv) {
     }
     file = fopen("stats.txt", "a");
     fseek(file, 0, SEEK_END);
-    fprintf(file, "%f %d %d %d", merge_sort_elapsed, n, m, P);
+    fprintf(file, "%f %f %d %d %d\n", merge_sort_elapsed, quicksort_elapsed, n, m, P);
     fclose(file);
 
     
