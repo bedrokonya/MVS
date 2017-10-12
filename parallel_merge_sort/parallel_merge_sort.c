@@ -48,21 +48,22 @@ int cmpfunc (const void * a, const void * b) {
 void p_merge2(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) {
     int i = 0;
     int j = 0;
-    while((i < r1 + 1) && (j + (r1 + 1) < r2 + 1)) {
-        if(initial[i] < initial[j + (r1 + 1)]) {
-            output[p3 + i + j] = initial[i];
+    
+    while((i + p1 < r1 + 1) && (j + p2 < r2 + 1)) {
+        if(initial[p1 + i] < initial[p2 + j]) {
+            output[p3 + i + j] = initial[p1 + i];
             i++;
         } else {
-            output[p3 + i + j] = initial[j + (r1 + 1)];
+            output[p3 + i + j] = initial[p2 + j];
             j++;
         }
     }
-    while(i < (r1 + 1)) {
-        output[p3 + i + j] = initial[i];
+    while(i + p1 < r1 + 1) {
+        output[p3 + i + j] = initial[p1 + i];
         i++;
     }
-    while(j + (r1 + 1) < r2 + 1) {
-        output[p3 + i + j] = initial[(r1 + 1) + j];
+    while(j + p2 < r2 + 1) {
+        output[p3 + i + j] = initial[p2 + j];
         j++;
     }
 }
@@ -92,17 +93,17 @@ void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) 
         output[q3] = initial[q1];
         #pragma omp parallel
         {
-            #pragma omp sections
+            #pragma omp sections nowait
             {
                 #pragma omp section
                 {
                     p_merge2(initial, p1, q1 - 1, p2, q2 - 1, output, p3);
-                    printf("merging (%d..%d) with (%d..%d)\n", p1, q1 - 1, p2, q2 - 1);
+                    //printf("merging (%d..%d) with (%d..%d)\n", p1, q1 - 1, p2, q2 - 1);
                 }
                 #pragma omp section
                 {
                     p_merge2(initial, q1 + 1, r1, q2, r2, output, q3 + 1);
-                    printf("merging (%d..%d) with (%d..%d)\n", q1 + 1, r1, q2, r2);
+                    //printf("merging (%d..%d) with (%d..%d)\n", q1 + 1, r1, q2, r2);
                 }
             }
         }
@@ -122,7 +123,7 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
                            // где будут храниться отсортированные элементы подмассива initial[q+1..r]
         #pragma omp parallel
         {
-            #pragma omp sections
+            #pragma omp sections nowait
             {
                 #pragma omp section
                 {
@@ -137,7 +138,7 @@ void p_merge_sort(int* initial, int p, int r, int* output, int s) {
         }
         p_merge(temp, 0, t - 1, t, n - 1, output, s);
         //p_merge2(temp, 0, t - 1, t, n - 1, output, s);
-        //free(temp);
+        free(temp);
         return;
     }
     else {
