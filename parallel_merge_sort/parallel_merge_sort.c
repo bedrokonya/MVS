@@ -16,6 +16,7 @@ void swap(int* a, int* b) {
     return;
 }
 
+
 int my_max(int a, int b) {
     if (a > b) {
         return a;
@@ -24,6 +25,7 @@ int my_max(int a, int b) {
         return b;
     }
 }
+
 
 int binary_search(int x, int* arr, int p, int r) {
     int low = p;
@@ -40,12 +42,17 @@ int binary_search(int x, int* arr, int p, int r) {
     return high;
 }
 
+
 int cmpfunc (const void * a, const void * b) {
     return ( *(int*)a - *(int*)b );
 }
 
 
-void p_merge2(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) {
+// simple_merge -- старый добрый мердж для одного потока,
+// сливает подмассивы initial[p1..r1] и initial[p2..r2]
+// в output[p3..r3], однако не предполагается, что initial[p1..r1] и initial[p2..r2]
+// граничат друг с другом
+void simple_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) {
     int i = 0;
     int j = 0;
     
@@ -68,11 +75,11 @@ void p_merge2(int* initial, int p1, int r1, int p2, int r2, int* output, int p3)
     }
 }
 
-
-
+ 
+// p_merge параллельно сливает два отсортированных подмассива initial[р1..r1] и initial[p2..r2]
+// в подмассив output[p3..r3].
 // Предполагается, что два сливаемых подмассива находятся в одном и том же массиве,
-// однако не предполагается, что они граничат друг с другом. 
-// Сливает два отсортированных подмассива initial[р1..r1] и initial[p2..r2] в подмассив output[p3..r3].
+// однако не предполагается, что они граничат друг с другом.
 void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) {
     int n1 = r1 - p1 + 1;
     int n2 = r2 - p2 + 1;
@@ -97,13 +104,11 @@ void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) 
             {
                 #pragma omp section
                 {
-                    p_merge2(initial, p1, q1 - 1, p2, q2 - 1, output, p3);
-                    //printf("merging (%d..%d) with (%d..%d)\n", p1, q1 - 1, p2, q2 - 1);
+                    simple_merge(initial, p1, q1 - 1, p2, q2 - 1, output, p3);
                 }
                 #pragma omp section
                 {
-                    p_merge2(initial, q1 + 1, r1, q2, r2, output, q3 + 1);
-                    //printf("merging (%d..%d) with (%d..%d)\n", q1 + 1, r1, q2, r2);
+                    simple_merge(initial, q1 + 1, r1, q2, r2, output, q3 + 1);
                 }
             }
         }
@@ -112,41 +117,38 @@ void p_merge(int* initial, int p1, int r1, int p2, int r2, int* output, int p3) 
 }
 
 
-
 // p_merge_sort сортирует элементы в initial[p..r] и сохраняет их в output[s..s + r - p]
 void p_merge_sort(int* initial, int p, int r, int* output, int s) {
     int n = r - p + 1;
-    if (r - p > MAX_SIZE_OF_CHUNK) {
-        int* temp =  (int *) malloc(sizeof(int) * n);
-        int q = (p + r) / 2;
-        int t = q - p + 1; // определяем начальный индекс в temp, указывающий,
-                           // где будут храниться отсортированные элементы подмассива initial[q+1..r]
-        #pragma omp parallel
-        {
-            #pragma omp sections nowait
-            {
-                #pragma omp section
-                {
-                    p_merge_sort(initial, p, q, temp, 0);
-                }
-                
-                #pragma omp section
-                {
-                    p_merge_sort(initial, q + 1, r, temp, t);
-                }
-            }
-        }
-        p_merge(temp, 0, t - 1, t, n - 1, output, s);
-        //p_merge2(temp, 0, t - 1, t, n - 1, output, s);
-        free(temp);
-        return;
-    }
-    else {
+    if (r - p <= MAX_SIZE_OF_CHUNK) {
         qsort(&initial[p], r - p + 1, sizeof(int), cmpfunc);
         memcpy(&output[s], &initial[p], (r - p + 1) * sizeof(int));
         return;
     }
+    int* temp =  (int *) malloc(sizeof(int) * n);
+    int q = (p + r) / 2;
+    int t = q - p + 1; // определяем начальный индекс в temp, указывающий,
+                       // где будут храниться отсортированные элементы подмассива initial[q+1..r]
+    #pragma omp parallel
+    {
+        #pragma omp sections nowait
+        {
+            #pragma omp section
+            {
+                p_merge_sort(initial, p, q, temp, 0);
+            }
+                
+            #pragma omp section
+            {
+                p_merge_sort(initial, q + 1, r, temp, t);
+            }
+        }
+    }
+    p_merge(temp, 0, t - 1, t, n - 1, output, s);
+    free(temp);
+    return;
 }
+
 
 int main(int argc, char** argv) {
     int n; // количество чисел в сортируемом массиве
@@ -157,9 +159,8 @@ int main(int argc, char** argv) {
     if (argc != 4) {
         printf("Try better, there are supposed to be 3 of the arguments: n, m, P\n");
         return 0;
-    } else {
-        printf("Right amount of the arguments, yeeeeee\n");
     }
+    
     n = atoi(argv[1]);
     m = atoi(argv[2]);
     P = atoi(argv[3]);
@@ -189,7 +190,7 @@ int main(int argc, char** argv) {
     omp_set_dynamic(0);
     omp_set_num_threads(P);
     
-    // генерируем массив для сортировки
+    // Генерируем массив для сортировки
     srand(time(NULL));
     for (int i = 0; i < n; i++) {
         int t = rand() % 10000;
@@ -197,11 +198,10 @@ int main(int argc, char** argv) {
         array_for_quick_sort[i] = t;
     }
     
-    FILE* file = fopen("data.txt", "a");
-    fseek(file, 0, SEEK_END);
-    //for (int i = 0; i < n; i++) {
-    //    fprintf(file, "%d ", array_for_merge_sort[i]);
-    //}
+    FILE* file = fopen("data.txt", "w");
+    for (int i = 0; i < n; i++) {
+        fprintf(file, "%d ", array_for_merge_sort[i]);
+    }
     fprintf(file, "\n");
     
     double start = omp_get_wtime();
@@ -209,11 +209,11 @@ int main(int argc, char** argv) {
     double end = omp_get_wtime();
     double merge_sort_elapsed = end - start;
     printf("%f merge sort time\n", merge_sort_elapsed);
-    fseek(file, 0, SEEK_END);
-    //for (int i = 0; i < n; i++) {
-    //    fprintf(file, "%d ", result_merge_sort[i]);
-    //}
-    //fprintf(file, "\n\n");
+    
+    for (int i = 0; i < n; i++) {
+        fprintf(file, "%d ", result_merge_sort[i]);
+    }
+    fprintf(file, "\n\n");
     fclose(file);
 
     start = omp_get_wtime();
@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
     double quicksort_elapsed = end - start;
     printf("%f quicksort time\n", quicksort_elapsed);
 
-    // проверяем, корректно ли отработал наш мердж сорт
+    // Проверяем, корректно ли отработал наш мердж сорт
     for (int i = 0; i < n; i ++) {
         if (array_for_quick_sort[i] == result_merge_sort[i]) {
             if (i == n - 1) {
@@ -239,7 +239,6 @@ int main(int argc, char** argv) {
     fprintf(file, "%f %f %d %d %d\n", merge_sort_elapsed, quicksort_elapsed, n, m, P);
     fclose(file);
 
-    
     
     free(array_for_quick_sort);
     free(array_for_merge_sort);
