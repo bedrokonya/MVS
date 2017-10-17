@@ -51,16 +51,7 @@ void simple_merge(int* initial, int l1, int r1, int l2, int r2) {
     
     // инициализируем temp1 и temp2
     memcpy(temp1, &initial[l1], n1 * sizeof(int));
-    //for(i = 0; i < n1; i++) {
-    //    temp1[i] = initial[l1 + i];
-    //}
-    
     memcpy(temp2, &initial[l2], n2 * sizeof(int));
-    //for(i = 0; i < n2; i++) {
-    //    temp2[i] = initial[l2 + i];
-    //}
-    
-    i = 0;
     
     while((i < n1) && (j < n2)) {
         if(temp1[i] < temp2[j]) {
@@ -250,20 +241,20 @@ int main(int argc, char** argv) {
     //printf("\n");
     
     FILE* file = fopen("data.txt", "w");
-    //for (int i = 0; i < n; i++) {
-    //    fprintf(file, "%d ", array_for_merge_sort[i]);
-    //}
+    for (int i = 0; i < n; i++) {
+        fprintf(file, "%d ", array_for_merge_sort[i]);
+    }
     fprintf(file, "\n");
     
     double start = clock();
-    p_merge_sort2(array_for_merge_sort, n);
+    p_merge_sort(array_for_merge_sort, n);
     double end = clock();
     double merge_sort_elapsed = difftime(end, start) / CLOCKS_PER_SEC;
     printf("%f merge sort time\n", merge_sort_elapsed);
     
-    //for (int i = 0; i < n; i++) {
-    //    fprintf(file, "%d ", array_for_merge_sort[i]);
-    //}
+    for (int i = 0; i < n; i++) {
+        fprintf(file, "%d ", array_for_merge_sort[i]);
+    }
     fprintf(file, "\n\n");
     fclose(file);
     
@@ -305,5 +296,3 @@ int main(int argc, char** argv) {
     
     return 0;
 }
-
-
