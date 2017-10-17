@@ -50,12 +50,15 @@ void simple_merge(int* initial, int l1, int r1, int l2, int r2) {
     int* temp2 = malloc(n2 * sizeof(int));
     
     // инициализируем temp1 и temp2
-    for(i = 0; i < n1; i++) {
-        temp1[i] = initial[l1 + i];
-    }
-    for(i = 0; i < n2; i++) {
-        temp2[i] = initial[l2 + i];
-    }
+    memcpy(temp1, &initial[l1], n1 * sizeof(int));
+    //for(i = 0; i < n1; i++) {
+    //    temp1[i] = initial[l1 + i];
+    //}
+    
+    memcpy(temp2, &initial[l2], n2 * sizeof(int));
+    //for(i = 0; i < n2; i++) {
+    //    temp2[i] = initial[l2 + i];
+    //}
     
     i = 0;
     
@@ -199,6 +202,7 @@ void p_merge_sort2(int* initial, int n) {
             if (r2 > n - 1) {
                 r2 = n - 1;
             }
+            cur_index = r2 + 1;
             simple_merge(initial, l1, r1, l2, r2);
         }
     }
