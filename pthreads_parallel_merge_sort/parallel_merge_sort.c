@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
     // Генерируем массив для сортировки
     srand(time(NULL));
     for (int i = 0; i < n; i++) {
-        int t = rand() % 100;
+        int t = rand() % 10000;
         array_for_merge_sort[i] = t;
         array_for_quick_sort[i] = t;
     }
