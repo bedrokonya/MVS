@@ -17,24 +17,25 @@ int n; // количество чисел в сортируемом массив
 int P; // количество потоков
 int m; // максимальный размер чанка
 
+
 int cmpfunc (const void * a, const void * b) {
     return ( *(int*)a - *(int*)b );
 }
 
 
-typedef struct pthread_chunk_data_t {
-    int l; // левая граница чанка
-    int r; // правая граница чанка
-    int* chunk_location;
+typedef struct pthread_chunks_data_t {
+    int start_index; // начало куска, который нужно отсортировать
+    int chunks_amount_for_thread; // количество чанков, которые нужно отсортировать
+    int* chunks_location; // указатель на массив, в котором чанки находятся
     
-} pthread_chunk_data_t;
+} pthread_chunks_data_t;
 
 typedef struct pthread_data_t {
-    int l1;
+    int l1; // начало первого сливаемого куска
     int r1;
-    int l2;
+    int l2; // начало второго сливаемого куска
     int r2;
-    int* location;
+    int* location; // указатель на массив, в котором они находятся
 } pthread_data_t;
 
 
@@ -45,7 +46,7 @@ void simple_merge(int* initial, int l1, int r1, int l2, int r2) {
     int i = 0;
     int j = 0;
     int n1 = r1 - l1 + 1; // размер первого сливаемого подмассива
-    int n2 = r2 - l2 + 1; // размер второго
+    int n2 = r2 - l2 + 1; // размер второго сливаемого подмассива
     int* temp1 = malloc(n1 * sizeof(int));
     int* temp2 = malloc(n2 * sizeof(int));
     
@@ -75,16 +76,22 @@ void simple_merge(int* initial, int l1, int r1, int l2, int r2) {
     free(temp2);
 }
 
-
-void* thread_sort_chunk(void* chunk_data_) {
-    pthread_chunk_data_t* chunk_data = (pthread_chunk_data_t*) chunk_data_;
-    int l = chunk_data->l;
-    int r = chunk_data->r;
-    int* chunk_location = chunk_data->chunk_location;
-    qsort(&chunk_location[l], r - l + 1, sizeof(int), cmpfunc);
+// функция для создания потока, который будет соритировать чанки с помощью quicksort'a
+void* thread_sort_chunks(void* chunks_data_) {
+    pthread_chunks_data_t* chunks_data = (pthread_chunks_data_t*) chunks_data_;
+    int start_index = chunks_data->start_index;
+    int chunks_amount_for_thread = chunks_data->chunks_amount_for_thread;
+    int* chunks_location = chunks_data->chunks_location;
+    
+    int cur_index = start_index;
+    for (int i = 0; i < chunks_amount_for_thread; i++) {
+        qsort(&chunks_location[cur_index], m, sizeof(int), cmpfunc);
+        cur_index += m;
+    }
     return NULL;
 }
 
+// функция для для создания потока, который будет мерджить подмассивы
 void* thread_simple_merge(void* data_) {
     pthread_data_t* data = (pthread_data_t*) data_;
     int l1 = data->l1;
@@ -97,36 +104,41 @@ void* thread_simple_merge(void* data_) {
     return NULL;
 }
 
-// sort_chunks разбивает initial на чанки и параллельно сортирует их с помощью pthreads
+
+// sort_chunks параллельно сортирует чанки размера m с помощью quicksort
 void sort_chunks(int* initial, int n) {
     pthread_t* threads = (pthread_t*) malloc(P * sizeof(pthread_t));
     assert(threads);
-    pthread_chunk_data_t* thread_data = malloc(P * sizeof(pthread_chunk_data_t));
+    pthread_chunks_data_t* thread_data = malloc(P * sizeof(pthread_chunks_data_t));
     assert(thread_data);
     
+    int chunks_amount = n / m;
+    int chunks_amount_for_thread = chunks_amount / P;
+    
     int cur_index = 0;
-    while(cur_index + P * m < n) {
-        for(int i = 0; i < P; i++) {
-            thread_data[i].l = cur_index;
-            thread_data[i].r = cur_index + m - 1;
-            thread_data[i].chunk_location = initial;
-            pthread_create(&(threads[i]), NULL, thread_sort_chunk, &thread_data[i]);
-            cur_index += m;
-        }
-        
-        for(int i = 0; i < P; i++) {
-            pthread_join(threads[i], NULL);
-        }
+    
+    //создаем потоки
+    for(int i = 0; i < P; i++) {
+        thread_data[i].start_index = cur_index;
+        thread_data[i].chunks_amount_for_thread = chunks_amount_for_thread;
+        thread_data[i].chunks_location = initial;
+        pthread_create(&(threads[i]), NULL, thread_sort_chunks, &thread_data[i]);
+        cur_index += m * chunks_amount_for_thread;
+    }
+    
+    // ждем, когда потоки отработают
+    for(int i = 0; i < P; i++) {
+        pthread_join(threads[i], NULL);
     }
     
     //нам нужно отсортировать оставшийся хвост (если вдруг таковой имеется)
     qsort(&initial[cur_index], n - cur_index, sizeof(int), cmpfunc);
-   
+    
     free(threads);
     free(thread_data);
 }
 
-
+// p_merge_sort сортирует n элементов в массиве initial 
 void p_merge_sort(int* initial, int n) {
     
     sort_chunks(initial, n);
@@ -136,7 +148,7 @@ void p_merge_sort(int* initial, int n) {
     pthread_data_t* thread_data = malloc(P * sizeof(pthread_data_t));
     assert(thread_data);
     
-    
+    // параллельное слияние подмассивов
     for (int cur_size = m; cur_size < n; cur_size *= 2) {
         int cur_index = 0;
         int num_threads = P;
@@ -153,7 +165,6 @@ void p_merge_sort(int* initial, int n) {
                 if (r2 > n - 1) {
                     r2 = n - 1;
                 }
-                
                 cur_index = r2 + 1;
                 
                 thread_data[i].l1 = l1;
@@ -176,39 +187,15 @@ void p_merge_sort(int* initial, int n) {
 }
 
 
-// попытка написать непараллельное слияние
-void p_merge_sort2(int* initial, int n) {
-    sort_chunks(initial, n);
-    
-    for (int cur_size = m; cur_size < n; cur_size *= 2) {
-        int cur_index = 0;
-        while (cur_index + cur_size + 1 < n) {
-            int l1 = cur_index;
-            int r1 = cur_index + cur_size - 1;
-            if (r1 >= n) {
-                break;
-            }
-            int l2 = r1 + 1;
-            int r2 = l2 + cur_size - 1;
-            if (r2 > n - 1) {
-                r2 = n - 1;
-            }
-            cur_index = r2 + 1;
-            simple_merge(initial, l1, r1, l2, r2);
-        }
-    }
-}
-
 
 int main(int argc, char** argv) {
-    
     
     if (argc != 4) {
         printf("Try better, there are supposed to be 3 of the arguments: n, m, P\n");
         return 0;
     }
-
-    // считывание данных и выделение памяти
+    
+    // Считывание данных и выделение памяти
     n = atoi(argv[1]);
     m = atoi(argv[2]);
     P = atoi(argv[3]);
@@ -218,7 +205,7 @@ int main(int argc, char** argv) {
         printf("memory allocation error\n");
         exit(1);
     }
-
+    
     int* array_for_merge_sort = (int *) malloc(sizeof(int) * n);
     if (array_for_merge_sort == NULL) {
         printf("memory allocation error\n");
@@ -234,41 +221,35 @@ int main(int argc, char** argv) {
         array_for_quick_sort[i] = t;
     }
     
-    
-    //for (int i = 0; i < n; i++) {
-    //    printf("%d ",  array_for_merge_sort[i]);
-    //}
-    //printf("\n");
-    
     FILE* file = fopen("data.txt", "w");
     for (int i = 0; i < n; i++) {
         fprintf(file, "%d ", array_for_merge_sort[i]);
     }
     fprintf(file, "\n");
     
-    double start = clock();
+    
+    struct timespec start, finish;
+    double merge_sort_elapsed;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     p_merge_sort(array_for_merge_sort, n);
-    double end = clock();
-    double merge_sort_elapsed = difftime(end, start) / CLOCKS_PER_SEC;
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+    merge_sort_elapsed = (finish.tv_sec - start.tv_sec);
+    merge_sort_elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
     printf("%f merge sort time\n", merge_sort_elapsed);
     
     for (int i = 0; i < n; i++) {
         fprintf(file, "%d ", array_for_merge_sort[i]);
     }
+    
     fprintf(file, "\n\n");
     fclose(file);
     
-    start = clock();
+    double quicksort_elapsed;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     qsort(&array_for_quick_sort[0], n, sizeof(int), cmpfunc);
-    end = clock();
-    
-    //for (int i = 0; i < n; i++) {
-    //    printf("%d ",  array_for_quick_sort[i]);
-    //}
-    //printf("\n");
-    
-    
-    double quicksort_elapsed = difftime(end, start) / CLOCKS_PER_SEC;
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+    quicksort_elapsed = (finish.tv_sec - start.tv_sec);
+    quicksort_elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
     printf("%f quicksort time\n", quicksort_elapsed);
     
     
@@ -290,9 +271,9 @@ int main(int argc, char** argv) {
     fprintf(file, "%f %f %d %d %d\n", merge_sort_elapsed, quicksort_elapsed, n, m, P);
     fclose(file);
     
-    
     free(array_for_quick_sort);
     free(array_for_merge_sort);
     
     return 0;
 }
+
