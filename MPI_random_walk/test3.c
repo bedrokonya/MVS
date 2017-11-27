@@ -193,42 +193,70 @@ void pop(point_t** array, int* size, int index) {
 void random_walk(void* _ctx) {
     ctx_t* ctx = _ctx;
     
-    int size_send_to_left, size_send_to_right, size_send_to_up, size_send_to_down,
-    completed_size, incompleted_size, capacity_send_to_left, capacity_send_to_right,
-    capacity_send_to_up, capacity_send_to_down, completed_capacity,
-    incompleted_capacity, size_recv_from_left, size_recv_from_right,
-    size_recv_from_up, size_recv_from_down, left_process_rank, right_process_rank, up_process_rank, down_process_rank,
-    index_point, flag, seed, direction, i;
+    int size_send_to_left = 0;
+    int capacity_send_to_left = ctx->N;
+    point_t* batch_send_to_left = calloc(capacity_send_to_left, sizeof(point_t));
+    assert(batch_send_to_left);
+
+    int size_send_to_right = 0;
+    int capacity_send_to_right = ctx->N;
+    point_t* batch_send_to_right = calloc(capacity_send_to_right, sizeof(point_t));
+    assert(batch_send_to_right);
+
+    int size_send_to_up = 0;
+    int capacity_send_to_up = ctx->N;
+    point_t* batch_send_to_up = calloc(capacity_send_to_up, sizeof(point_t));
+    assert(batch_send_to_up);
+
+    int size_send_to_down = 0;
+    int capacity_send_to_down = ctx->N;
+    point_t* batch_send_to_down = calloc(capacity_send_to_down, sizeof(point_t));
+    assert(batch_send_to_down);
+
+    int completed_size = 0;
+    int completed_capacity = ctx->N;
+    point_t* completed_batch = calloc(completed_capacity, sizeof(point_t));
+    assert(completed_batch);
+
+    int incompleted_size = ctx->N;
+    int incompleted_capacity = ctx->N;
+    point_t* incompleted_batch = calloc(incompleted_capacity, sizeof(point_t));
+    assert(incompleted_batch);
+
+    
+    int size_recv_from_left = 0;
+    int size_recv_from_right = 0;
+    int size_recv_from_up = 0;
+    int size_recv_from_down = 0;
+    
+//    int left_process_rank;
+//    int right_process_rank;
+//    int up_process_rank;
+//    int down_process_rank;
+    
+    int index_point;
+    int flag;
+    int seed;
+    int direction;
+    int i;
     
     seed = create_seeds(ctx->rank, ctx->size);
     srand(seed);
     
-    size_send_to_left = size_send_to_right = size_send_to_up = size_send_to_down =\
-    completed_size = size_recv_from_left =\
-    size_recv_from_right = size_recv_from_up =\
-    size_recv_from_down = 0;
-    incompleted_size = capacity_send_to_left = capacity_send_to_right =\
-    capacity_send_to_up = capacity_send_to_down =\
-    completed_capacity = incompleted_capacity = ctx->N;
+//    size_send_to_left = size_send_to_right = size_send_to_up = size_send_to_down =\
+//    completed_size = size_recv_from_left =\
+//    size_recv_from_right = size_recv_from_up =\
+//    size_recv_from_down = 0;
+//    incompleted_size = capacity_send_to_left = capacity_send_to_right =\
+//    capacity_send_to_up = capacity_send_to_down =\
+//    completed_capacity = incompleted_capacity = ctx->N;
     
-    left_process_rank= get_next_process_rank(ctx, LEFT);
-    right_process_rank = get_next_process_rank(ctx, RIGHT);
-    up_process_rank = get_next_process_rank(ctx, UP);
-    down_process_rank = get_next_process_rank(ctx, DOWN);
+    int left_process_rank= get_next_process_rank(ctx, LEFT);
+    int right_process_rank = get_next_process_rank(ctx, RIGHT);
+    int up_process_rank = get_next_process_rank(ctx, UP);
+    int down_process_rank = get_next_process_rank(ctx, DOWN);
     
-    point_t* batch_send_to_left = calloc(capacity_send_to_left, sizeof(point_t));
-    point_t* batch_send_to_right = calloc(capacity_send_to_right, sizeof(point_t));
-    point_t* batch_send_to_up = calloc(capacity_send_to_up, sizeof(point_t));
-    point_t* batch_send_to_down = calloc(capacity_send_to_down, sizeof(point_t));
-    point_t* completed_batch = calloc(completed_capacity, sizeof(point_t));
-    point_t* incompleted_batch = calloc(incompleted_capacity, sizeof(point_t));
     
-    assert(batch_send_to_left);
-    assert(batch_send_to_right);
-    assert(batch_send_to_up);
-    assert(batch_send_to_down);
-    assert(completed_batch);
-    assert(incompleted_batch);
     
     for (i = 0; i < ctx->N; ++i) {
         incompleted_batch[i].x = rand() % ctx->l;
