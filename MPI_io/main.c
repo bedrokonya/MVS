@@ -55,8 +55,8 @@ void run(void* _ctx) {
     }
 
     
-    MPI_File fd;
-    MPI_File_open(MPI_COMM_WORLD, "data.bin", MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &fd);
+    MPI_File file;
+    MPI_File_open(MPI_COMM_WORLD, "data.bin", MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &file);
     MPI_Datatype type;
     MPI_Type_vector(ctx->l, ctx->l * ctx->size, ctx->l * ctx->size * ctx->a, MPI_INT, &type);
     MPI_Type_commit(&type);
@@ -65,10 +65,10 @@ void run(void* _ctx) {
     int x_rank = ctx->rank % ctx->a;
     int offset = (y_rank * ctx->a * ctx->l * ctx->l * ctx->size + x_rank * ctx->l * ctx->size) * sizeof(int);
     
-    MPI_File_set_view(fd, offset, MPI_INT, type, "native", MPI_INFO_NULL);
-    MPI_File_write(fd, data, ctx->l * ctx->l * ctx->size, MPI_INT, MPI_STATUS_IGNORE);
+    MPI_File_set_view(file, offset, MPI_INT, type, "native", MPI_INFO_NULL);
+    MPI_File_write(file, data, ctx->l * ctx->l * ctx->size, MPI_INT, MPI_STATUS_IGNORE);
     MPI_Type_free(&type);
-    MPI_File_close(&fd);
+    MPI_File_close(&file);
     
     free(data);
 }
@@ -115,7 +115,7 @@ void check_for_correctness(ctx_t* _ctx) {
 	free(process_data);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
     int rank;
     int size;
@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
         } else {
 			check_for_correctness(&ctx);
             fprintf(file, "%d %d %d %d %0.2f\n", ctx.l, ctx.a, ctx.b, ctx.N, elapsed_time);
-            fclose(file);
+			fclose(file);
         }
     }
 	
